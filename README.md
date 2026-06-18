@@ -1,5 +1,11 @@
 # circbuf — Linux Character Device Driver
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Language: C](https://img.shields.io/badge/language-C-00599C.svg?logo=c&logoColor=white)](circbuf.c)
+[![Platform: Linux Kernel Module](https://img.shields.io/badge/platform-Linux%20Kernel%20Module-FCC624.svg?logo=linux&logoColor=black)](circbuf.c)
+[![Dev env: Docker](https://img.shields.io/badge/dev%20env-Docker-2496ED.svg?logo=docker&logoColor=white)](docker/Dockerfile)
+[![Tested under: QEMU](https://img.shields.io/badge/tested%20under-QEMU-FF6600.svg?logo=qemu&logoColor=white)](docker/run.sh)
+
 A Linux kernel module implementing a virtual circular buffer device, exposing a
 concurrent, blocking I/O interface through the standard Unix file abstraction.
 It covers kernel/user-space boundary management, synchronization in kernel
@@ -253,6 +259,17 @@ close(fd);
 
 ## Testing
 
+macOS (the development machine for this project) can't build or load Linux
+kernel modules natively, so the test harness in [`docker/run.sh`](docker/run.sh)
+builds `circbuf.ko` against real kernel headers inside a Docker container, then
+boots a stock Linux kernel under QEMU with a minimal busybox initramfs
+([`docker/init.sh`](docker/init.sh)) to load the module and drive the test
+suite end-to-end — `insmod` → tests → `rmmod`, on a real kernel, not a mock.
+
+```bash
+./docker/run.sh test
+```
+
 ### Concurrent stress test
 
 `tests/stress.c` spawns N writer threads and M reader threads operating
@@ -264,6 +281,28 @@ simultaneously on the device, verifying:
 
 ```bash
 ./stress /dev/circbuf --writers=4 --readers=4 --duration=10
+```
+
+### Results — last verified run
+
+`Linux 6.8.0-124-generic` (aarch64, QEMU `virt` machine, Ubuntu 24.04 kernel headers)
+
+| Check | Outcome |
+|---|---|
+| `insmod` / `rmmod` (default 4096-byte buffer) | ✅ Pass — clean load/unload, no kernel warnings beyond the expected out-of-tree taint notice |
+| `basic_test` — open → write → read → `ioctl` roundtrip | ✅ Pass — bytes written matched bytes read back exactly |
+| `query_stats` — `ioctl` buffer introspection | ✅ Pass — `capacity=4096 used=0 available=4096` |
+| `stress` — 4 writers / 4 readers, 5s concurrent load | ✅ Pass — `total_written=13682240` = `total_read=13682240`, zero bytes lost or duplicated |
+| Reload with `buffer_size=16384` module parameter | ✅ Pass — `capacity=16384` confirmed via `ioctl` after reload |
+| Kernel log (`dmesg`) | No panics, no lockups, no hangs |
+
+```
+== stress ==
+device=/dev/circbuf writers=4 readers=4 duration=5s
+total_written=13682240 total_read=13682240
+stress: PASS
+...
+ALL TESTS PASSED
 ```
 
 ### Kernel sanitizers
