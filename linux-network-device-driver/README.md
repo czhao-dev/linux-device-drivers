@@ -1,6 +1,6 @@
 # netdrv — Virtual Ethernet Driver Pair with NAPI
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
 [![Language: C](https://img.shields.io/badge/Language-C-A8B9CC.svg)](src/)
 ![Platform: Linux Kernel Module](https://img.shields.io/badge/Platform-Linux%20Kernel%20Module-FCC624.svg?logo=linux&logoColor=black)
 ![Scripts: Bash](https://img.shields.io/badge/Scripts-Bash-4EAA25.svg?logo=gnubash&logoColor=white)
@@ -59,7 +59,6 @@ the driver's own ring counters look healthy while `ping` silently failed
 ├── scripts/        # netns setup/teardown/smoke-test helpers (require root)
 ├── docker/         # Docker + QEMU end-to-end test harness
 ├── Makefile        # kbuild wrapper (make / make clean)
-├── LICENSE         # MIT
 └── README.md
 ```
 

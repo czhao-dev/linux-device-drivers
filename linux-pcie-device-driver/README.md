@@ -1,6 +1,6 @@
 # pcie-edu-driver — Linux PCIe Driver
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 ![Language: C](https://img.shields.io/badge/language-C-555.svg)
 
 A Linux kernel module implementing a PCIe device driver for QEMU's "edu"

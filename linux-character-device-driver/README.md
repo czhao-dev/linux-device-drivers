@@ -1,6 +1,6 @@
 # circbuf — Linux Character Device Driver
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 [![Language: C](https://img.shields.io/badge/language-C-00599C.svg?logo=c&logoColor=white)](circbuf.c)
 [![Platform: Linux Kernel Module](https://img.shields.io/badge/platform-Linux%20Kernel%20Module-FCC624.svg?logo=linux&logoColor=black)](circbuf.c)
 [![Dev env: Docker](https://img.shields.io/badge/dev%20env-Docker-2496ED.svg?logo=docker&logoColor=white)](docker/Dockerfile)
