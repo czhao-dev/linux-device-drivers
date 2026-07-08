@@ -334,7 +334,7 @@ Extensions).
 
 ```bash
 make
-insmod netdrv.ko
+insmod src/netdrv.ko
 ip link show               # vnet0 and vnet1 should appear, state DOWN
 dmesg | tail                # confirm both interfaces registered
 ```
@@ -377,7 +377,7 @@ cat /proc/net/softnet_stat
 
 ### Backpressure
 
-Shrinking `RING_SIZE` to a small value (e.g., 4) makes `netif_stop_queue`/
+Shrinking `ring_size` to a small value (e.g., 4) makes `netif_stop_queue`/
 `wake_queue` transitions observable via a debug counter (exposed through
 `ethtool -S vnet0`) — confirming the stack correctly pauses and resumes
 transmission as the ring fills and drains.

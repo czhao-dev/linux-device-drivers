@@ -28,6 +28,8 @@ identification register, a "compute" register that triggers an asynchronous
 factorial calculation and raises an interrupt on completion, and a small DMA
 engine that can copy data between host memory and the device.
 
+---
+
 ## Architecture
 
 ```
@@ -320,8 +322,8 @@ required. The container provides the kernel headers, a bootable kernel, and
 QEMU; [docker/run.sh](docker/run.sh) drives the rest.
 
 ```bash
-git clone https://github.com/czhao-dev/Linux-PCIe-Driver.git
-cd Linux-PCIe-Driver
+git clone https://github.com/czhao-dev/linux-pcie-device-driver.git
+cd linux-pcie-device-driver
 
 ./docker/run.sh build   # compile pcie_edu.ko and the test binary only
 ./docker/run.sh test    # build, boot QEMU with -device edu, run the test suite
@@ -383,6 +385,8 @@ before/after).
 
 Every check above maps directly to one of the PASS/FAIL lines in
 [docker/init.sh](docker/init.sh) and [tests/pcie_edu_test.c](tests/pcie_edu_test.c).
+
+---
 
 ## Test Results
 
@@ -489,6 +493,8 @@ above from scratch.
 - **Real FPGA target** — port the driver to a PCIe-connected FPGA development
   board running custom RTL (potentially the mini-GPU project), closing the loop
   from RTL design to host software
+
+---
 
 ## References
 
