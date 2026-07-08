@@ -29,6 +29,25 @@ kernel/user boundary, not on device-specific register programming.
 
 ---
 
+## Repository Layout
+
+```text
+.
+├── circbuf.c  # driver: file_operations, circular buffer, wait queues
+├── circbuf.h  # ioctl command definitions, struct circbuf_stats
+├── Makefile   # kernel module build (kbuild)
+├── docker/
+│   ├── Dockerfile  # QEMU + kernel headers dev/test environment
+│   ├── init.sh     # guest-side: insmod, run tests, report results
+│   └── run.sh      # host-side: build image, boot QEMU, capture output
+└── tests/
+    ├── basic_test.c   # open/read/write/ioctl correctness
+    ├── query_stats.c  # CIRCBUF_GET_STATS ioctl exercise
+    └── stress.c       # concurrent multi-writer/multi-reader stress test
+```
+
+---
+
 ## Architecture
 
 ```

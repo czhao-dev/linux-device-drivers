@@ -98,24 +98,24 @@ bypass parts of the kernel networking path.
 ## Architecture
 
 ```
-        vnet0                                          vnet1
- ┌─────────────────────┐                       ┌─────────────────────┐
- │ Network Stack         │                       │ Network Stack         │
- │  (IP, sockets, etc.)   │                       │  (IP, sockets, etc.)   │
- └──────────┬─────────────┘                       └──────────┬─────────────┘
-            │ ndo_start_xmit(skb)                              │ netif_receive_skb(skb)
-            ▼                                                  ▲
- ┌─────────────────────┐                       ┌─────────────────────┐
- │  TX ring (vnet0)       │                       │  RX ring (vnet1)       │
- │  [desc][desc][desc]... │──── skb handoff ────►│  [desc][desc][desc]... │
- └─────────────────────┘   (software "wire")    └──────────┬─────────────┘
-                                                              │ tasklet_schedule
-                                                              ▼ (simulated IRQ)
-                                                  ┌─────────────────────┐
-                                                  │  NAPI poll (vnet1)     │
-                                                  │  drains RX ring,        │
-                                                  │  netif_receive_skb()    │
-                                                  └─────────────────────┘
+         vnet0                                         vnet1
+ ┌──────────────────────┐                      ┌──────────────────────┐
+ │ Network Stack        │                      │ Network Stack        │
+ │ (IP, sockets, etc.)  │                      │ (IP, sockets, etc.)  │
+ └──────────┬───────────┘                      └──────────┬───────────┘
+            │ ndo_start_xmit(skb)                         │ netif_receive_skb(skb)
+            ▼                                             ▲
+ ┌──────────────────────┐                      ┌──────────────────────┐
+ │ TX ring (vnet0)      │                      │ RX ring (vnet1)      │
+ │ [desc][desc][desc]...│── skb handoff ──►    │ [desc][desc][desc]...│
+ └──────────────────────┘ (software "wire")    └──────────┬───────────┘
+                                                          │ tasklet_schedule
+                                                          ▼ (simulated IRQ)
+                                               ┌──────────────────────┐
+                                               │ NAPI poll (vnet1)    │
+                                               │ drains RX ring,      │
+                                               │ netif_receive_skb()  │
+                                               └──────────────────────┘
 
  Symmetric in the other direction: vnet1's TX ring feeds vnet0's RX ring.
 ```

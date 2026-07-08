@@ -30,6 +30,25 @@ engine that can copy data between host memory and the device.
 
 ---
 
+## Repository Layout
+
+```text
+.
+├── pcie_edu.c  # driver: probe/remove, BAR mapping, MSI, DMA
+├── pcie_edu.h  # register offsets, ioctl command definitions
+├── Makefile    # kernel module build (kbuild)
+├── docker/
+│   ├── Dockerfile  # QEMU + kernel headers dev/test environment
+│   ├── init.sh     # guest-side: insmod, run tests, report results
+│   └── run.sh      # host-side: build image, boot QEMU (-device edu), capture output
+├── docs/
+│   └── edu-register-map.md  # register offsets, DMA addressing convention
+└── tests/
+    └── pcie_edu_test.c  # identification, compute+interrupt, DMA round-trip
+```
+
+---
+
 ## Architecture
 
 ```

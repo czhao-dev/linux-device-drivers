@@ -32,6 +32,25 @@ programming.
 
 ---
 
+## Repository Layout
+
+```text
+.
+├── vblk.c    # driver: gendisk/blk-mq registration, bio segment iteration
+├── vblk.h    # ioctl command definitions, struct vblk_stats
+├── Makefile  # kernel module build (kbuild)
+├── docker/
+│   ├── Dockerfile  # QEMU + kernel headers dev/test environment
+│   ├── init.sh     # guest-side: insmod, run tests, report results
+│   └── run.sh      # host-side: build image, boot QEMU, capture output
+└── tests/
+    ├── basic_test.c   # mke2fs + mount round trip, raw pread/pwrite
+    ├── query_stats.c  # VBLK_GET_STATS ioctl exercise
+    └── stress.c       # concurrent multi-writer stress test
+```
+
+---
+
 ## Architecture
 
 ```
