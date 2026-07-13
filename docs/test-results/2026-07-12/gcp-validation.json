@@ -1,0 +1,63 @@
+{
+  "run_date": "2026-07-12 America/Los_Angeles (2026-07-13 UTC)",
+  "source_commit": "2e90b55e06973bf40916cb3552fc289c128738d9",
+  "method": "Three independent runs of each project’s existing Docker/QEMU end-to-end harness. Pass/fail is determined from the guest test marker, not QEMU’s host exit code.",
+  "runners": [
+    {
+      "projects": ["character", "block", "network"],
+      "machine_type": "t2a-standard-4",
+      "zone": "us-central1-a",
+      "host_architecture": "aarch64",
+      "host_kernel": "6.17.0-1020-gcp",
+      "container_kernel": "6.8.0-134-generic",
+      "qemu": "8.2.2"
+    },
+    {
+      "projects": ["pcie"],
+      "machine_type": "e2-standard-4",
+      "zone": "us-west1-b",
+      "host_architecture": "x86_64",
+      "host_kernel": "6.17.0-1020-gcp",
+      "container_kernel": "6.8.0-134-generic",
+      "qemu": "8.2.2"
+    }
+  ],
+  "suites": [
+    {
+      "id": "character",
+      "name": "circbuf",
+      "runs": [
+        {"passed": true, "stress_bytes_written": 3665600, "stress_mib_per_s": 0.699},
+        {"passed": true, "stress_bytes_written": 4064192, "stress_mib_per_s": 0.775},
+        {"passed": true, "stress_bytes_written": 3704256, "stress_mib_per_s": 0.707}
+      ]
+    },
+    {
+      "id": "block",
+      "name": "vblk",
+      "runs": [
+        {"passed": false, "basic_test_passed": true, "stress_bytes_written": 19727872, "stress_mib_per_s": 3.762, "failure": "stress final verification reported corruption in region 0"},
+        {"passed": false, "basic_test_passed": true, "stress_bytes_written": 19201536, "stress_mib_per_s": 3.662, "failure": "stress final verification reported corruption in region 0"},
+        {"passed": false, "basic_test_passed": true, "stress_bytes_written": 18898944, "stress_mib_per_s": 3.605, "failure": "stress final verification reported corruption in region 0"}
+      ]
+    },
+    {
+      "id": "network",
+      "name": "netdrv",
+      "runs": [
+        {"passed": true, "udp_sender_mbit_per_s": 27.0, "tx_queue_stops": 13, "tx_queue_wakes": 13, "driver_tx_packets": 13806},
+        {"passed": true, "udp_sender_mbit_per_s": 27.7, "tx_queue_stops": 13, "tx_queue_wakes": 13, "driver_tx_packets": 14060},
+        {"passed": true, "udp_sender_mbit_per_s": 26.9, "tx_queue_stops": 18, "tx_queue_wakes": 18, "driver_tx_packets": 13737}
+      ]
+    },
+    {
+      "id": "pcie",
+      "name": "pcie-edu-driver",
+      "runs": [
+        {"passed": true, "checks": ["MSI registered", "factorial ioctl", "DMA round-trip", "clean remove"]},
+        {"passed": true, "checks": ["MSI registered", "factorial ioctl", "DMA round-trip", "clean remove"]},
+        {"passed": true, "checks": ["MSI registered", "factorial ioctl", "DMA round-trip", "clean remove"]}
+      ]
+    }
+  ]
+}
