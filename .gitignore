@@ -20,6 +20,9 @@ tests/stress
 **/tests/stress
 **/tests/pcie_edu_test
 
+# Benchmark/test-result artifacts (regenerate via scripts/plot_gcp_results.py)
+**/docs/test-results/
+
 # Editor/OS cruft
 *.swp
 .DS_Store

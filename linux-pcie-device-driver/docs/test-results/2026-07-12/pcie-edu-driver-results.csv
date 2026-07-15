@@ -1,4 +1,0 @@
-run,checks,passed
-1,MSI registered; factorial ioctl; DMA round-trip; clean remove,True
-2,MSI registered; factorial ioctl; DMA round-trip; clean remove,True
-3,MSI registered; factorial ioctl; DMA round-trip; clean remove,True
