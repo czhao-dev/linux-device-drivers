@@ -1,0 +1,34 @@
+{
+  "project": "vblk",
+  "run_date": "2026-07-14 America/Los_Angeles (2026-07-14 UTC)",
+  "source_commit": "f309e07880ae1e9959b053ece412272e31670bcf",
+  "runner": {
+    "machine_type": "t2a-standard-4",
+    "zone": "us-central1-a",
+    "host_architecture": "aarch64",
+    "host_kernel": "6.17.0-1020-gcp",
+    "container_kernel": "6.8.0-134-generic",
+    "qemu": "8.2.2"
+  },
+  "runs": [
+    {
+      "passed": true,
+      "basic_test_passed": true,
+      "stress_bytes_written": 62041600,
+      "stress_mib_per_s": 11.833
+    },
+    {
+      "passed": true,
+      "basic_test_passed": true,
+      "stress_bytes_written": 62316032,
+      "stress_mib_per_s": 11.886
+    },
+    {
+      "passed": true,
+      "basic_test_passed": true,
+      "stress_bytes_written": 61660672,
+      "stress_mib_per_s": 11.761
+    }
+  ],
+  "note": "Re-run after fixing tests/stress.c (see commit f309e07). The prior 2026-07-12 run reported 'corruption in region 0' on every run; that was a test-harness false positive, not a driver bug -- the shadow buffer assumed the region started zeroed, but basic_test's earlier O_DIRECT writes at offsets 0/1MiB/2MiB (inside thread 0's region) left real data there before stress ran. Bytes the randomized writes never happened to touch again mismatched the zeroed shadow. The old 3.762/3.662/3.605 MiB/s figures from that run were never valid throughput numbers and are superseded by this run."
+}

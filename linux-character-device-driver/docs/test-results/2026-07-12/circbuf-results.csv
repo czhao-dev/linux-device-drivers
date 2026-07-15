@@ -1,0 +1,4 @@
+run,passed,stress_bytes_written,stress_mib_per_s
+1,True,3665600,0.699
+2,True,4064192,0.775
+3,True,3704256,0.707

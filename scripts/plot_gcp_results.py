@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Render README charts from a GCP validation result JSON file."""
+"""Render per-subproject benchmark charts from a project's results JSON.
+
+Each driver subproject keeps its own docs/test-results/<date>/<project>-results.json
+(see each subproject's README for how it's produced). This script renders one
+PNG per project next to its JSON -- no cross-project combined chart, since each
+image is meant to be embedded standalone in that subproject's own README.
+
+Usage:
+    python3 scripts/plot_gcp_results.py <project>-results.json
+"""
 
 from __future__ import annotations
 
@@ -8,87 +17,139 @@ import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
+
+# Palette slots taken from the dataviz skill's validated reference palette
+# (light mode): categorical slot 1 (blue) for measured values, the fixed
+# "good" status color for pass markers, and the standard chart chrome/ink.
+BLUE = "#2a78d6"
+GOOD = "#0ca30c"
+SURFACE = "#fcfcfb"
+INK_PRIMARY = "#0b0b0b"
+INK_SECONDARY = "#52514e"
+INK_MUTED = "#898781"
+GRIDLINE = "#e1e0d9"
+BASELINE = "#c3c2b7"
+
+plt.rcParams.update({
+    "font.family": "sans-serif",
+    "text.color": INK_PRIMARY,
+    "axes.edgecolor": BASELINE,
+    "axes.labelcolor": INK_SECONDARY,
+    "xtick.color": INK_MUTED,
+    "ytick.color": INK_MUTED,
+})
 
 
-def load_results(path: Path) -> dict:
-    with path.open(encoding="utf-8") as source:
-        return json.load(source)
+def _run_status_strip(ax, runs: list[dict]) -> None:
+    ax.set_xlim(0, len(runs))
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    for i, run in enumerate(runs):
+        passed = run["passed"]
+        color = GOOD if passed else "#d03b3b"
+        ax.add_patch(plt.Rectangle((i + 0.06, 0.15), 0.88, 0.7, color=color, alpha=0.15))
+        ax.text(i + 0.5, 0.5, f"Run {i + 1}\n{'PASS' if passed else 'FAIL'}",
+                 ha="center", va="center", color=color, weight="bold", fontsize=10)
 
 
-def plot_pass_matrix(results: dict, output: Path) -> None:
-    suites = results["suites"]
-    names = [suite["name"] for suite in suites]
-    matrix = [[int(run["passed"]) for run in suite["runs"]] for suite in suites]
+def _bar_with_labels(ax, x, values, ylabel, title, fmt="{:.3f}"):
+    bars = ax.bar(x, values, width=0.5, color=BLUE)
+    for bar, value in zip(bars, values):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+                 fmt.format(value), ha="center", va="bottom",
+                 color=INK_SECONDARY, fontsize=9)
+    ax.set_xticks(x, [f"Run {i + 1}" for i in x])
+    ax.set_ylabel(ylabel)
+    ax.set_title(title, color=INK_PRIMARY, fontsize=11, loc="left")
+    ax.grid(axis="y", color=GRIDLINE, linewidth=0.8, zorder=0)
+    ax.set_axisbelow(True)
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
 
-    fig, ax = plt.subplots(figsize=(7.2, 3.5), layout="constrained")
-    image = ax.imshow(matrix, cmap=ListedColormap(["#c53b3b", "#2b8a5a"]),
-                      vmin=0, vmax=1, aspect="auto")
-    del image
-    ax.set_xticks(range(3), ["Run 1", "Run 2", "Run 3"])
-    ax.set_yticks(range(len(names)), names)
-    ax.set_title("GCP end-to-end validation outcome")
-    for row, suite in enumerate(suites):
-        for column, run in enumerate(suite["runs"]):
-            ax.text(column, row, "PASS" if run["passed"] else "FAIL",
-                    ha="center", va="center", color="white", weight="bold")
-    ax.set_xlabel("Independent harness run")
-    ax.set_ylabel("Driver project")
-    fig.savefig(output / "pass-matrix.png", dpi=180)
+
+def plot_stress_project(data: dict, out: Path, label: str) -> None:
+    """circbuf / vblk: one throughput metric (MiB/s) across 3 runs."""
+    runs = data["runs"]
+    x = list(range(len(runs)))
+    rates = [r["stress_mib_per_s"] for r in runs]
+
+    fig = plt.figure(figsize=(6.4, 5.2), layout="constrained", facecolor=SURFACE)
+    strip_ax, bar_ax = fig.subplots(2, 1, height_ratios=[1, 3])
+    strip_ax.set_facecolor(SURFACE)
+    bar_ax.set_facecolor(SURFACE)
+    _run_status_strip(strip_ax, runs)
+    _bar_with_labels(bar_ax, x, rates, "Stress write rate (MiB/s)",
+                      f"{label} concurrent stress throughput")
+    fig.savefig(out, dpi=180, facecolor=SURFACE)
     plt.close(fig)
 
 
-def plot_workloads(results: dict, output: Path) -> None:
-    suites = {suite["id"]: suite for suite in results["suites"]}
-    character = suites["character"]["runs"]
-    block = suites["block"]["runs"]
-    network = suites["network"]["runs"]
-    runs = ["Run 1", "Run 2", "Run 3"]
-    x = list(range(3))
+def plot_netdrv(data: dict, out: Path) -> None:
+    """netdrv: UDP sender bitrate and TX queue stops, as two single-axis charts."""
+    runs = data["runs"]
+    x = list(range(len(runs)))
+    bitrate = [r["udp_sender_mbit_per_s"] for r in runs]
+    stops = [r["tx_queue_stops"] for r in runs]
 
-    fig, (stress_ax, network_ax) = plt.subplots(2, 1, figsize=(8, 6.4), layout="constrained")
-    char_rates = [run["stress_mib_per_s"] for run in character]
-    block_rates = [run["stress_mib_per_s"] for run in block]
-    width = 0.36
-    stress_ax.bar([value - width / 2 for value in x], char_rates, width,
-                  label="circbuf (validated)", color="#357edd")
-    bars = stress_ax.bar([value + width / 2 for value in x], block_rates, width,
-                         label="vblk (integrity failed)", color="#c53b3b", hatch="//")
-    for bar, rate in zip(bars, block_rates):
-        stress_ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
-                       f"{rate:.2f}\nFAIL", ha="center", va="bottom", fontsize=8)
-    stress_ax.set_xticks(x, runs)
-    stress_ax.set_ylabel("Observed write rate (MiB/s)")
-    stress_ax.set_title("Stress workload measurements")
-    stress_ax.legend(loc="upper right")
-    stress_ax.grid(axis="y", alpha=0.25)
-
-    bandwidth = [run["udp_sender_mbit_per_s"] for run in network]
-    stops = [run["tx_queue_stops"] for run in network]
-    network_ax.bar(x, bandwidth, color="#357edd", label="UDP sender bitrate")
-    network_ax.set_xticks(x, runs)
-    network_ax.set_ylabel("Sender bitrate (Mbit/s)")
-    network_ax.set_title("netdrv UDP backpressure workload")
-    network_ax.grid(axis="y", alpha=0.25)
-    stops_ax = network_ax.twinx()
-    stops_ax.plot(x, stops, color="#c97800", marker="o", label="TX queue stops")
-    stops_ax.set_ylabel("TX queue stops")
-    handles, labels = network_ax.get_legend_handles_labels()
-    right_handles, right_labels = stops_ax.get_legend_handles_labels()
-    network_ax.legend(handles + right_handles, labels + right_labels, loc="upper left")
-    fig.savefig(output / "workload-results.png", dpi=180)
+    fig = plt.figure(figsize=(6.4, 7.4), layout="constrained", facecolor=SURFACE)
+    strip_ax, bitrate_ax, stops_ax = fig.subplots(3, 1, height_ratios=[1, 3, 3])
+    for ax in (strip_ax, bitrate_ax, stops_ax):
+        ax.set_facecolor(SURFACE)
+    _run_status_strip(strip_ax, runs)
+    _bar_with_labels(bitrate_ax, x, bitrate, "Sender bitrate (Mbit/s)",
+                      "netdrv UDP backpressure: sender bitrate", fmt="{:.1f}")
+    _bar_with_labels(stops_ax, x, stops, "TX queue stops (count)",
+                      "netdrv UDP backpressure: TX queue stops (ring_size=4)", fmt="{:.0f}")
+    fig.savefig(out, dpi=180, facecolor=SURFACE)
     plt.close(fig)
+
+
+def plot_pcie(data: dict, out: Path) -> None:
+    """pcie: boolean checks only (no magnitude) -- status strip + checklist, not a bar chart."""
+    runs = data["runs"]
+    checks = runs[0]["checks"]
+
+    fig = plt.figure(figsize=(6.4, 3.6), layout="constrained", facecolor=SURFACE)
+    strip_ax, list_ax = fig.subplots(2, 1, height_ratios=[1, 2])
+    strip_ax.set_facecolor(SURFACE)
+    list_ax.set_facecolor(SURFACE)
+    _run_status_strip(strip_ax, runs)
+
+    list_ax.axis("off")
+    list_ax.set_title("Guest checks (identical across all 3 runs)",
+                       color=INK_PRIMARY, fontsize=11, loc="left")
+    for i, check in enumerate(checks):
+        y = 1 - (i + 0.5) / len(checks)
+        list_ax.text(0.02, y, "✓", color=GOOD, weight="bold", fontsize=12,
+                      transform=list_ax.transAxes, va="center")
+        list_ax.text(0.09, y, check, color=INK_SECONDARY, fontsize=10,
+                      transform=list_ax.transAxes, va="center")
+    fig.savefig(out, dpi=180, facecolor=SURFACE)
+    plt.close(fig)
+
+
+PROJECT_LABELS = {"circbuf": "circbuf", "vblk": "vblk"}
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("results", type=Path)
-    parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    results = load_results(args.results)
-    plot_pass_matrix(results, args.output_dir)
-    plot_workloads(results, args.output_dir)
+
+    data = json.loads(args.results.read_text())
+    project = data["project"]
+    out = args.results.with_name(f"{project}-results.png")
+
+    if project in ("circbuf", "vblk"):
+        plot_stress_project(data, out, PROJECT_LABELS[project])
+    elif project == "netdrv":
+        plot_netdrv(data, out)
+    elif project == "pcie-edu-driver":
+        plot_pcie(data, out)
+    else:
+        raise SystemExit(f"unknown project: {project}")
+
+    print(f"wrote {out}")
 
 
 if __name__ == "__main__":

@@ -324,6 +324,30 @@ stress: PASS
 ALL TESTS PASSED
 ```
 
+### GCP Benchmark Results — 2026-07-12 (three runs)
+
+Independent reproducibility check on an Ubuntu 24.04 `t2a-standard-4`
+(aarch64) GCP VM in `us-central1-a`, separate from the local dev-loop run
+above: three independent runs of the full Docker/QEMU end-to-end harness
+(source commit `2e90b55e`, host kernel `6.17.0-1020-gcp`, container kernel
+`6.8.0-134-generic`, QEMU `8.2.2`). Pass/fail is read from the guest test
+marker, not QEMU's host exit code.
+
+![circbuf GCP benchmark results](docs/test-results/2026-07-12/circbuf-results.png)
+
+All three runs passed with no flakiness. The write rate (~0.70–0.78 MiB/s)
+is the throughput of 4 concurrent writers and 4 concurrent readers all
+serialized through a single mutex-protected circular buffer over a 5-second
+window — it's bounded by that lock contention, not by memory bandwidth,
+which is the point of the design tradeoff discussed above (see [Mutex vs
+Spinlock](#2-mutex-vs-spinlock--choosing-the-right-primitive)). The
+run-to-run spread (0.699 / 0.775 / 0.707) is ordinary VM scheduling noise
+across independent QEMU boots, not a regression signal.
+
+Machine-readable data: [JSON](docs/test-results/2026-07-12/circbuf-results.json) ·
+[CSV](docs/test-results/2026-07-12/circbuf-results.csv). Regenerate the plot
+with `python3 ../scripts/plot_gcp_results.py docs/test-results/2026-07-12/circbuf-results.json`.
+
 ### Kernel sanitizers
 
 Build with `CONFIG_KASAN=y` (Kernel Address Sanitizer) and

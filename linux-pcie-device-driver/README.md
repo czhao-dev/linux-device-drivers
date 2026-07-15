@@ -496,6 +496,31 @@ You can reproduce this run yourself with `./docker/run.sh test` — it rebuilds
 the module against the container's kernel headers and re-runs every check
 above from scratch.
 
+### GCP Benchmark Results — 2026-07-12 (three runs)
+
+Independent reproducibility check on an Ubuntu 24.04 `e2-standard-4`
+(x86_64) GCP VM in `us-west1-b` — x86_64 rather than aarch64 like the other
+three drivers, matching this project's x86 `q35`/`-device edu` QEMU guest.
+Three independent runs of the full Docker/QEMU end-to-end harness (source
+commit `2e90b55e`, host kernel `6.17.0-1020-gcp`, container kernel
+`6.8.0-134-generic`, QEMU `8.2.2`).
+
+![pcie-edu-driver GCP benchmark results](docs/test-results/2026-07-12/pcie-edu-driver-results.png)
+
+All three runs passed every check identically — MSI registration, the
+factorial ioctl compute path, the DMA round-trip, and clean `remove()` with
+no leaked BAR or IRQ resources. Unlike the other three drivers, this
+workload has no throughput metric to chart: `-device edu` is a fixed
+synchronous compute/DMA exerciser (five factorial cases, one 4096-byte DMA
+transfer), so a chart here shows the same boolean checklist passing on each
+run rather than a magnitude that varies — which is itself the interesting
+result: zero flakiness in interrupt registration or resource cleanup across
+independent QEMU boots.
+
+Machine-readable data: [JSON](docs/test-results/2026-07-12/pcie-edu-driver-results.json) ·
+[CSV](docs/test-results/2026-07-12/pcie-edu-driver-results.csv). Regenerate the plot
+with `python3 ../scripts/plot_gcp_results.py docs/test-results/2026-07-12/pcie-edu-driver-results.json`.
+
 ---
 
 ## Future Extensions

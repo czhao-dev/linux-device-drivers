@@ -487,6 +487,36 @@ asserting they match at unload).
 
 ---
 
+## GCP Benchmark Results — 2026-07-12 (three runs)
+
+Independent reproducibility check on an Ubuntu 24.04 `t2a-standard-4`
+(aarch64) GCP VM in `us-central1-a`: three independent runs of the full
+Docker/QEMU end-to-end harness (source commit `2e90b55e`, host kernel
+`6.17.0-1020-gcp`, container kernel `6.8.0-134-generic`, QEMU `8.2.2`).
+Pass/fail is read from the `NETDRV_E2E_RESULT` marker `init.sh` prints to
+the console, not QEMU's host exit code.
+
+![netdrv GCP benchmark results](docs/test-results/2026-07-12/netdrv-results.png)
+
+All three runs passed every check, including the backpressure test. The UDP
+sender bitrate (~27 Mbit/s) is intentionally low: with `ring_size=4` the
+driver's TX ring fills almost immediately under 4 parallel unlimited-rate
+`iperf3` UDP streams, so the reported rate is throttled by
+`netif_stop_queue`/`wake_queue` backpressure, not by link capacity — that
+throttling is exactly what the test is verifying. `tx_queue_stops` (13, 13,
+18) counts how many times the ring filled and the queue had to stop; it
+varies run to run because it depends on the exact interleaving of NAPI
+polling versus the 4 sender threads' scheduling, but in every run it stays
+positive (confirming backpressure was actually exercised) and `tx_packets`
+still equals the peer's `rx_packets` (confirming no packets were dropped
+under that backpressure, just delayed).
+
+Machine-readable data: [JSON](docs/test-results/2026-07-12/netdrv-results.json) ·
+[CSV](docs/test-results/2026-07-12/netdrv-results.csv). Regenerate the plot
+with `python3 ../scripts/plot_gcp_results.py docs/test-results/2026-07-12/netdrv-results.json`.
+
+---
+
 ## Relationship to Broader Work
 
 This project extends the driver-development theme into the networking

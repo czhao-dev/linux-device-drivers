@@ -212,38 +212,6 @@ PCIe driver — a QEMU session started with `-device edu`.
 All four drivers pass their full test suites against kernel
 `6.8.0-124-generic` (Ubuntu 24.04, aarch64 / QEMU `virt` or `q35`).
 
-### GCP validation run — 2026-07-12 (three runs per project)
-
-The following is a separate, reproducible GCP run against source commit
-`2e90b55e06973bf40916cb3552fc289c128738d9`. The character, block, and network
-harnesses ran on an Ubuntu 24.04 `t2a-standard-4` (aarch64) VM in
-`us-central1-a`; the PCIe harness ran on an Ubuntu 24.04 `e2-standard-4`
-(x86_64) VM in `us-west1-b`, matching its x86 QEMU guest. Both runners used
-host kernel `6.17.0-1020-gcp`, Docker 29.1.3, container kernel
-`6.8.0-134-generic`, and QEMU 8.2.2.
-
-| Driver | Run 1 | Run 2 | Run 3 | Workload result |
-|---|---:|---:|---:|---|
-| `circbuf` | ✅ Pass | ✅ Pass | ✅ Pass | Stress throughput: 0.699 / 0.775 / 0.707 MiB/s |
-| `vblk` | ❌ Fail | ❌ Fail | ❌ Fail | `basic_test` passed; stress final verification reported corruption in region 0 in every run. The observed 3.762 / 3.662 / 3.605 MiB/s rates are **not valid benchmark results**. |
-| `netdrv` | ✅ Pass | ✅ Pass | ✅ Pass | UDP sender: 27.0 / 27.7 / 26.9 Mbit/s; TX queue stops: 13 / 13 / 18 |
-| `pcie-edu-driver` | ✅ Pass | ✅ Pass | ✅ Pass | Enumeration, MSI, factorial, DMA round-trip, and clean removal passed |
-
-The block-driver failure stops its guest init sequence before its filesystem
-capstone and reload checks, so those checks were not represented as passed in
-this run. The network UDP workload intentionally saturates a small ring; the
-reported sender rate and driver packet counters are the comparable metrics,
-while receiver UDP loss is expected under that backpressure test.
-
-![Three-run GCP validation matrix](docs/test-results/2026-07-12/pass-matrix.png)
-
-![GCP stress and network workload measurements](docs/test-results/2026-07-12/workload-results.png)
-
-The complete machine-readable measurements are available as
-[JSON](docs/test-results/2026-07-12/gcp-validation.json) and
-[CSV](docs/test-results/2026-07-12/gcp-validation.csv). The plots are
-regenerated from the JSON with `scripts/plot_gcp_results.py`.
-
 ### circbuf
 
 | Check | Result |
@@ -261,10 +229,16 @@ regenerated from the JSON with `scripts/plot_gcp_results.py`.
 |---|---|
 | `insmod` / `rmmod` (default 16 MiB) | ✅ Pass |
 | `basic_test` — `O_DIRECT` `pwrite`/`pread`/`pwritev` + `ioctl` | ✅ `capacity_bytes=16777216 reads=3 writes=3` |
-| `stress` — 4 threads, disjoint regions, 5 s | ✅ `total_written=222857728`, zero corruption |
+| `stress` — 4 threads, disjoint regions, 5 s | ✅ `total_written≈62 MB` (~11.8 MiB/s), zero corruption |
 | `mke2fs` + `mount -t ext2` + file I/O + `umount` | ✅ Pass |
 | Reload with `disk_size_mb=8` | ✅ `capacity_bytes=8388608` confirmed |
 | `dmesg` | No panics, no lockups |
+
+`stress` previously reported false-positive corruption due to a test-harness
+bug (the shadow buffer didn't account for data other tests had already
+written to the region) — fixed in `tests/stress.c`. See the
+[`vblk` README](linux-block-device-driver/) for the investigation and the
+GCP-verified before/after benchmark data.
 
 ### netdrv
 
