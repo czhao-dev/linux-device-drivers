@@ -60,6 +60,20 @@ static void *worker(void *arg)
 		return NULL;
 	}
 
+	/*
+	 * Seed the shadow with the region's actual starting content rather
+	 * than assuming zero: earlier tests in the run (e.g. basic_test's
+	 * O_DIRECT writes at offset 0) may have already left data in this
+	 * region, and bytes this thread never happens to overwrite during
+	 * its randomized run must still match the shadow at final verify.
+	 */
+	if (pread(fd, ctx->shadow, ctx->region_size, ctx->region_off) != (ssize_t)ctx->region_size) {
+		fprintf(stderr, "thread %d: initial region read failed\n", ctx->id);
+		ctx->failed = 1;
+		close(fd);
+		return NULL;
+	}
+
 	size_t max_sectors = (ctx->region_size / SECTOR_SIZE);
 
 	while (now_seconds() < deadline) {
