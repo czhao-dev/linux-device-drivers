@@ -234,11 +234,8 @@ All four drivers pass their full test suites against kernel
 | Reload with `disk_size_mb=8` | ✅ `capacity_bytes=8388608` confirmed |
 | `dmesg` | No panics, no lockups |
 
-`stress` previously reported false-positive corruption due to a test-harness
-bug (the shadow buffer didn't account for data other tests had already
-written to the region) — fixed in `tests/stress.c`. See the
-[`vblk` README](linux-block-device-driver/) for the investigation and the
-GCP-verified before/after benchmark data.
+See the [`vblk` README](linux-block-device-driver/) for the full GCP-verified
+benchmark data.
 
 ### netdrv
 

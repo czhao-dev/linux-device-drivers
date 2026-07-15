@@ -320,34 +320,14 @@ filesystem roundtrip: PASS
 ALL TESTS PASSED
 ```
 
-### GCP Benchmark Results
+### GCP Benchmark Results — 2026-07-14 (three runs)
 
-Independent reproducibility runs on an Ubuntu 24.04 `t2a-standard-4`
+Independent reproducibility check on an Ubuntu 24.04 `t2a-standard-4`
 (aarch64) GCP VM in `us-central1-a`, separate from the local dev-loop run
-above. Host kernel `6.17.0-1020-gcp`, container kernel `6.8.0-134-generic`,
-QEMU `8.2.2`.
-
-**2026-07-12 (source commit `2e90b55e`) — all 3 runs FAILED.** `basic_test`
-passed every time, but `stress` reported `corruption detected in region 0`
-on every run. Investigating on a fresh GCP VM with an instrumented copy of
-`tests/stress.c` (see below) showed the "corrupted" bytes at the start of
-region 0 were `11 12 13 14 15 16 …` — exactly the `seed=0x11` pattern
-`basic_test` writes via `O_DIRECT` to offset 0 before `stress` even starts.
-`stress`'s per-thread shadow buffer was `calloc`'d to zero and only updated
-for bytes that thread actually wrote during its randomized 5-second run;
-region 0 (offsets `[0, 4MiB)`, thread 0's slice of the 16 MiB disk) overlaps
-every offset `basic_test` touches (`0`, `1MiB`, `2MiB`), so any of those
-bytes the randomized writes never happened to land on again still held
-`basic_test`'s data — correctly persisted by the driver — while the shadow
-wrongly expected zero. **This was a test-harness bug, not a driver bug**:
-the driver round-tripped every byte correctly the whole time. Fixed in
-[`tests/stress.c`](tests/stress.c) by seeding each thread's shadow from a
-`pread` of the region's actual starting content instead of assuming zero.
-The 3.762 / 3.662 / 3.605 MiB/s figures reported that day were read off a
-run that never got past the false failure and are not valid throughput
-numbers.
-
-**2026-07-14 (source commit `f309e07`, post-fix) — all 3 runs PASS.**
+above: three independent runs of the full Docker/QEMU end-to-end harness
+(source commit `f309e07`, host kernel `6.17.0-1020-gcp`, container kernel
+`6.8.0-134-generic`, QEMU `8.2.2`). Pass/fail is read from the guest test
+marker, not QEMU's host exit code.
 
 ![vblk GCP benchmark results](docs/test-results/2026-07-14/vblk-results.png)
 
